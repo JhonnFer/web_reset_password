@@ -61,24 +61,27 @@ document.getElementById('resetForm').addEventListener('submit', async (e) => {
     btnText.style.display = 'none';
     btnLoader.style.display = 'inline-block';
 
-    try {
-        // ///////////////////////////////////////////////////////////////
-        // LÓGICA DE SUPABASE (Dos pasos para eliminar el 403)
-        // ///////////////////////////////////////////////////////////////
-        
-        // PASO 1: Intercambiar el Recovery Token por un Session Token válido.
-        // Esto le dice al API Gateway: "Este token es legítimo, crea una sesión."
-        const { error: sessionError } = await supabase.auth.setSession({ access_token: accessToken });
+try {
+        // Obtenemos el tipo de token de la URL, si está disponible
+        const tokenType = params.get('type') || 'recovery'; // Debería ser 'recovery'
+
+        // PASO 1: Intercambiar el Recovery Token por un Session Token.
+        // Hacemos el setSession explícito con el tipo de evento de Auth.
+        const { error: sessionError } = await supabase.auth.setSession({ 
+            access_token: accessToken,
+            // Agregamos el tipo de evento (recovery) para mayor compatibilidad
+            type: tokenType // Esto asegura que Supabase sepa qué tipo de token está recibiendo
+        });
 
         if (sessionError) {
             console.error('Error al establecer la sesión (Paso 1):', sessionError);
-            errorDiv.textContent = sessionError.message || 'Error al validar el token de recuperación.';
+            // Mostrar error y retornar...
+            errorDiv.textContent = sessionError.message || 'Error al validar el token de recuperación. Intenta con un nuevo enlace.';
             errorDiv.style.display = 'block';
             return;
         }
 
-        // PASO 2: Actualizar la contraseña (Ahora con una sesión válida establecida por el cliente)
-        // Esto usa el Token de Sesión, satisfaciendo el endpoint /auth/v1/user
+        // PASO 2: Actualizar la contraseña (Solo si la sesión fue exitosa)
         const { error: updateError } = await supabase.auth.updateUser({ password: password });
 
         if (updateError) {
