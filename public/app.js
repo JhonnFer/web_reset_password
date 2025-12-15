@@ -5,7 +5,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // 1. Inicialización del cliente Supabase (¡Debe ir fuera del listener!)
 // Esto requiere que la etiqueta <script src="...supabase-js@2"></script> esté en tu HTML antes de app.js
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: {
         autoRefreshToken: false,
         persistSession: false,
