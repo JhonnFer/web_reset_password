@@ -1,4 +1,8 @@
-// public/app.js
+// public/app.js - BYPASS DE LIBRERÍA
+
+// 1. Configuración Manual
+const SUPABASE_PROJECT_URL = 'https://cufglydvzflmzmlfphwm.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1ZmdseWR2emZsbXptbGZwaHdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyOTU5ODgsImV4cCI6MjA4MDg3MTk4OH0.F8gcELQQxO6LbqxO1gqhiZwUjLT1DotLqdAmo1YvEv8';
 
 // Variables UI
 const resetForm = document.getElementById('resetForm');
@@ -10,43 +14,72 @@ const submitBtn = document.getElementById('submitBtn');
 const btnText = document.getElementById('btnText');
 const btnLoader = document.getElementById('btnLoader');
 
+// Obtener el token directamente del hash de la URL
+const hash = window.location.hash.substring(1);
+const params = new URLSearchParams(hash);
+const accessToken = params.get('access_token');
+const type = params.get('type');
+
+// Diagnóstico inicial en consola
+console.log("Token para Fetch:", accessToken ? "Presente" : "Faltante");
+console.log("Tipo:", type);
+
 function setProcessing(isProcessing) {
     if (submitBtn) submitBtn.disabled = isProcessing;
     if (btnText) btnText.style.display = isProcessing ? 'none' : 'inline';
     if (btnLoader) btnLoader.style.display = isProcessing ? 'inline-block' : 'none';
 }
 
-async function updatePassword(newPassword) {
+async function updatePasswordDirectly(newPassword) {
     setProcessing(true);
     if (errorDiv) errorDiv.style.display = 'none';
 
+    if (!accessToken) {
+        errorDiv.textContent = 'Error: No se encontró el token de seguridad. Usa el enlace de tu correo.';
+        errorDiv.style.display = 'block';
+        setProcessing(false);
+        return;
+    }
+
     try {
-        // Como eliminamos 'persistSession: false', ahora podemos verificar si la sesión existe
-        // antes de intentar actualizar.
-        const { data: { session } } = await supabase.auth.getSession();
+        // --- AQUÍ ESTÁ LA MAGIA: FETCH DIRECTO A LA API DE GO-TRUE ---
+        // Ignoramos la librería JS y hablamos directo con el servidor.
+        const response = await fetch(`${SUPABASE_PROJECT_URL}/auth/v1/user`, {
+            method: 'PUT', // Supabase usa PUT para actualizar usuario
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${accessToken}` // Usamos el token del correo como autorización
+            },
+            body: JSON.stringify({
+                password: newPassword
+            })
+        });
 
-        if (!session) {
-            throw new Error("No hay sesión activa. El enlace expiró o no se pudo validar.");
+        const data = await response.json();
+
+        if (!response.ok) {
+            // Si el servidor rechaza (400, 401, etc.)
+            throw new Error(data.msg || data.message || data.error_description || 'Error al actualizar');
         }
 
-        const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
-
-        if (updateError) {
-            throw updateError;
-        }
-
+        // Éxito
+        console.log("Actualización exitosa:", data);
         if (successDiv) {
             successDiv.textContent = '¡Contraseña actualizada exitosamente!';
             successDiv.style.display = 'block';
         }
         if (resetForm) resetForm.reset();
         
+        // Opcional: Cerrar ventana
         setTimeout(() => window.close(), 3000);
 
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error Fetch:', error);
         if (errorDiv) {
-            errorDiv.textContent = error.message || 'Error al actualizar.';
+            errorDiv.textContent = error.message === 'Token has expired or is invalid' 
+                ? 'El enlace ha expirado. Pide uno nuevo.' 
+                : ('Error: ' + error.message);
             errorDiv.style.display = 'block';
         }
     } finally {
@@ -71,6 +104,6 @@ if (resetForm) {
             return;
         }
         
-        await updatePassword(password);
+        await updatePasswordDirectly(password);
     });
 }
