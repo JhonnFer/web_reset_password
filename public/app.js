@@ -1,6 +1,17 @@
 // public\app.js
+
 const SUPABASE_URL = 'https://cufglydvzflmzmlfphwm.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1ZmdseWR2emZsbXptbGZwaHdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyOTU5ODgsImV4cCI6MjA4MDg3MTk4OH0.F8gcELQQxO6LbqxO1gqhiZwUjLT1DotLqdAmo1YvEv8';
+
+// 1. Inicialización del cliente Supabase (¡Debe ir fuera del listener!)
+// Esto requiere que la etiqueta <script src="...supabase-js@2"></script> esté en tu HTML antes de app.js
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+    }
+});
+
 
 document.getElementById('resetForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -16,6 +27,7 @@ document.getElementById('resetForm').addEventListener('submit', async (e) => {
     errorDiv.style.display = 'none';
     successDiv.style.display = 'none';
 
+    // Validación local
     if (password !== confirmPassword) {
         errorDiv.textContent = 'Las contraseñas no coinciden';
         errorDiv.style.display = 'block';
@@ -33,7 +45,7 @@ document.getElementById('resetForm').addEventListener('submit', async (e) => {
     const params = new URLSearchParams(hash);
     const accessToken = params.get('access_token');
 
-    // 1. DIAGNÓSTICO: Confirmar que el token se obtuvo correctamente
+    // MANTENEMOS el diagnóstico de token, pero eliminamos el diagnóstico de fetch fallido.
     console.log('--- Diagnóstico de Token ---');
     console.log('Access Token Obtenido:', accessToken ? 'Sí' : 'No');
     console.log('Token (solo inicio):', accessToken ? accessToken.substring(0, 10) + '...' : 'N/A');
@@ -49,26 +61,32 @@ document.getElementById('resetForm').addEventListener('submit', async (e) => {
     btnText.style.display = 'none';
     btnLoader.style.display = 'inline-block';
 
-try {
-    const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_KEY,
-            // CAMBIO: Intentamos enviar la clave pública como Bearer Token
-            // Esto es necesario en algunos escenarios del API Gateway.
-            // Si funciona, significa que el token de restablecimiento es el problema.
-            'Authorization': `Bearer ${SUPABASE_KEY}` 
-        },
-        body: JSON.stringify({ password })
-    });
-        // 2. DIAGNÓSTICO: Mostrar el estado de la respuesta de Supabase
-        console.log('--- Diagnóstico de Respuesta API ---');
-        console.log('Respuesta OK:', response.ok);
-        console.log('Código de Estado:', response.status); // 403, 401, etc.
-        console.log('------------------------------------');
+    try {
+        // ///////////////////////////////////////////////////////////////
+        // LÓGICA DE SUPABASE (Dos pasos para eliminar el 403)
+        // ///////////////////////////////////////////////////////////////
+        
+        // PASO 1: Intercambiar el Recovery Token por un Session Token válido.
+        // Esto le dice al API Gateway: "Este token es legítimo, crea una sesión."
+        const { error: sessionError } = await supabase.auth.setSession({ access_token: accessToken });
 
-        if (response.ok) {
+        if (sessionError) {
+            console.error('Error al establecer la sesión (Paso 1):', sessionError);
+            errorDiv.textContent = sessionError.message || 'Error al validar el token de recuperación.';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        // PASO 2: Actualizar la contraseña (Ahora con una sesión válida establecida por el cliente)
+        // Esto usa el Token de Sesión, satisfaciendo el endpoint /auth/v1/user
+        const { error: updateError } = await supabase.auth.updateUser({ password: password });
+
+        if (updateError) {
+            console.error('Error al actualizar contraseña (Paso 2):', updateError);
+            errorDiv.textContent = updateError.message || 'Error al actualizar contraseña.';
+            errorDiv.style.display = 'block';
+        } else {
+            // Éxito
             successDiv.textContent = '¡Contraseña actualizada exitosamente!';
             successDiv.style.display = 'block';
             document.getElementById('resetForm').reset();
@@ -76,26 +94,8 @@ try {
             setTimeout(() => {
                 window.close();
             }, 3000);
-        } else {
-            // Clonamos la respuesta para poder leer el cuerpo JSON sin bloquear otros procesos
-            const errorResponse = response.clone(); 
-            
-            try {
-                const error = await errorResponse.json();
-                
-                // 3. DIAGNÓSTICO: Mostrar el mensaje de error EXACTO del servidor
-                console.log('Mensaje de Error del Servidor:', error.message || 'Sin mensaje de error en la respuesta JSON.');
-                
-                errorDiv.textContent = error.message || 'Error al actualizar contraseña (Sin mensaje detallado).';
-                errorDiv.style.display = 'block';
-
-            } catch (jsonError) {
-                // Esto se ejecuta si Supabase devuelve un 403 o 401 sin cuerpo JSON válido
-                console.error('Error al parsear JSON de respuesta. El servidor devolvió:', response.statusText);
-                errorDiv.textContent = `Error ${response.status}: El servidor rechazó la solicitud (revisa CORS/Key).`;
-                errorDiv.style.display = 'block';
-            }
         }
+
     } catch (error) {
         console.error('Error de red o conexión:', error);
         errorDiv.textContent = 'Error de conexión. Intenta nuevamente.';
