@@ -49,17 +49,19 @@ document.getElementById('resetForm').addEventListener('submit', async (e) => {
     btnText.style.display = 'none';
     btnLoader.style.display = 'inline-block';
 
-    try {
-        const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${accessToken}`
-            },
-            body: JSON.stringify({ password })
-        });
-
+try {
+    const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_KEY,
+            // CAMBIO: Intentamos enviar la clave pública como Bearer Token
+            // Esto es necesario en algunos escenarios del API Gateway.
+            // Si funciona, significa que el token de restablecimiento es el problema.
+            'Authorization': `Bearer ${SUPABASE_KEY}` 
+        },
+        body: JSON.stringify({ password })
+    });
         // 2. DIAGNÓSTICO: Mostrar el estado de la respuesta de Supabase
         console.log('--- Diagnóstico de Respuesta API ---');
         console.log('Respuesta OK:', response.ok);
