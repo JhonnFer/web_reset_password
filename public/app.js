@@ -1,6 +1,13 @@
+//public\app.js
 const SUPABASE_URL = 'https://cufglydvzflmzmlfphwm.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1ZmdseWR2emZsbXptbGZwaHdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyOTU5ODgsImV4cCI6MjA4MDg3MTk4OH0.F8gcELQQxO6LbqxO1gqhiZwUjLT1DotLqdAmo1YvEv8';
-
+// 1. Inicializa el cliente de Supabase (¡Debe ir antes del listener!)
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+    }
+});
 document.getElementById('resetForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -43,35 +50,44 @@ document.getElementById('resetForm').addEventListener('submit', async (e) => {
   btnLoader.style.display = 'inline-block';
 
   try {
-    const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${accessToken}`
-      },
-      body: JSON.stringify({ password })
-    });
+        // ///////////////////////////////////////////////////////////
+        // 4. Lógica de Supabase: REEMPLAZA tu función fetch
+        // ///////////////////////////////////////////////////////////
 
-    if (response.ok) {
-      successDiv.textContent = '¡Contraseña actualizada exitosamente!';
-      successDiv.style.display = 'block';
-      document.getElementById('resetForm').reset();
+        // A. Primero, le decimos al cliente de Supabase que use el token de recuperación
+        const { error: sessionError } = await supabase.auth.setSession({ access_token: accessToken });
 
-      setTimeout(() => {
-        window.close();
-      }, 3000);
-    } else {
-      const error = await response.json();
-      errorDiv.textContent = error.message || 'Error al actualizar contraseña';
-      errorDiv.style.display = 'block';
+        if (sessionError) {
+            errorDiv.textContent = sessionError.message || 'Error al validar el token de recuperación.';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        // B. Luego, actualizamos la contraseña.
+        // La biblioteca envía el token y los encabezados correctamente.
+        const { error: updateError } = await supabase.auth.updateUser({ password: password });
+
+        if (updateError) {
+            // Manejo de error de la API (ej: contraseña demasiado débil, token usado)
+            errorDiv.textContent = updateError.message || 'Error al actualizar contraseña.';
+            errorDiv.style.display = 'block';
+        } else {
+            // Éxito
+            successDiv.textContent = '¡Contraseña actualizada exitosamente!';
+            successDiv.style.display = 'block';
+            document.getElementById('resetForm').reset();
+
+            setTimeout(() => {
+                window.close();
+            }, 3000);
+        }
+
+    } catch (error) {
+        errorDiv.textContent = 'Error de conexión. Intenta nuevamente.';
+        errorDiv.style.display = 'block';
+    } finally {
+        submitBtn.disabled = false;
+        btnText.style.display = 'inline';
+        btnLoader.style.display = 'none';
     }
-  } catch (error) {
-    errorDiv.textContent = 'Error de conexión. Intenta nuevamente.';
-    errorDiv.style.display = 'block';
-  } finally {
-    submitBtn.disabled = false;
-    btnText.style.display = 'inline';
-    btnLoader.style.display = 'none';
-  }
 });
