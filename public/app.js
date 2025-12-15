@@ -1,9 +1,9 @@
-// public\app.js (Versión Final Completa)
+// public\app.js (VERSION FINAL DE EVENTOS)
 
-const SUPABASE_URL = 'https://cufglydvzflmzmlfphwm.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1ZmdseWR2emZsbXptbGZwaHdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyOTU5ODgsImV4cCI6MjA4MDg3MTk4OH0.F8gcELQQxO6LbqxO1gqhiZwUjLT1DotLqdAmo1YvEv8';
+// !!! ELIMINAR LAS DECLARACIONES DE SUPABASE_URL Y SUPABASE_KEY AQUI !!!
+// Se asume que ya fueron declaradas en el script inline del HTML
 
-// 1. Inicialización del cliente Supabase (solo para usar en updateUser)
+// Inicialización del cliente Supabase (usamos las variables ya declaradas)
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: {
         autoRefreshToken: false,
@@ -11,62 +11,43 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     }
 });
 
+// Variables globales para elementos de la interfaz
+const resetForm = document.getElementById('resetForm');
+const passwordInput = document.getElementById('password');
+const confirmPasswordInput = document.getElementById('confirmPassword');
+const errorDiv = document.getElementById('error');
+const successDiv = document.getElementById('success');
+const submitBtn = document.getElementById('submitBtn');
+const btnText = document.getElementById('btnText');
+const btnLoader = document.getElementById('btnLoader');
 
-document.getElementById('resetForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
 
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirmPassword').value; // <--- Falta en tu versión
-    const errorDiv = document.getElementById('error');
-    const successDiv = document.getElementById('success');
-    const submitBtn = document.getElementById('submitBtn');
-    const btnText = document.getElementById('btnText');
-    const btnLoader = document.getElementById('btnLoader');
+// Función para mostrar el estado del botón
+function setProcessing(isProcessing) {
+    submitBtn.disabled = isProcessing;
+    btnText.style.display = isProcessing ? 'none' : 'inline';
+    btnLoader.style.display = isProcessing ? 'inline-block' : 'none';
+}
 
+// Función principal de actualización de contraseña
+async function updatePassword(newPassword) {
+    setProcessing(true);
     errorDiv.style.display = 'none';
     successDiv.style.display = 'none';
 
-    // //////////////////////////////////////////////////
-    // [validaciones de contraseña]
-    // //////////////////////////////////////////////////
-    if (password !== confirmPassword) {
-        errorDiv.textContent = 'Las contraseñas no coinciden';
-        errorDiv.style.display = 'block';
-        return;
-    }
-
-    if (password.length < 6) {
-        errorDiv.textContent = 'La contraseña debe tener al menos 6 caracteres';
-        errorDiv.style.display = 'block';
-        return;
-    }
-    // //////////////////////////////////////////////////
-    
-    // //////////////////////////////////////////////////
-    // [configuración de loading]
-    // //////////////////////////////////////////////////
-    submitBtn.disabled = true;
-    btnText.style.display = 'none';
-    btnLoader.style.display = 'inline-block';
-    // //////////////////////////////////////////////////
-
     try {
-        // ///////////////////////////////////////////////////////////////
-        // LÓGICA FINAL: SOLO ACTUALIZAR (La sesión ya fue establecida por el script inline)
-        // ///////////////////////////////////////////////////////////////
-        
-        const { error: updateError } = await supabase.auth.updateUser({ password: password });
+        // En esta versión, la sesión debe estar activa si el evento se disparó.
+        const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
 
         if (updateError) {
             console.error('Error al actualizar contraseña:', updateError);
-            // Si falla aquí, significa que el token no se capturó o expiró inmediatamente después.
-            errorDiv.textContent = updateError.message || 'Error: La sesión falló. Solicita un nuevo enlace.';
+            errorDiv.textContent = updateError.message || 'Error al actualizar contraseña. Por favor, solicita un nuevo enlace.';
             errorDiv.style.display = 'block';
         } else {
             // Éxito
             successDiv.textContent = '¡Contraseña actualizada exitosamente! Esta ventana se cerrará.';
             successDiv.style.display = 'block';
-            document.getElementById('resetForm').reset();
+            resetForm.reset();
 
             setTimeout(() => {
                 window.close();
@@ -74,20 +55,46 @@ document.getElementById('resetForm').addEventListener('submit', async (e) => {
         }
 
     } catch (error) {
-        // //////////////////////////////////////////////////
-        // [manejo de errores de red]
-        // //////////////////////////////////////////////////
         console.error('Error de red o conexión:', error);
         errorDiv.textContent = 'Error de conexión. Intenta nuevamente.';
         errorDiv.style.display = 'block';
-        // //////////////////////////////////////////////////
     } finally {
-        // //////////////////////////////////////////////////
-        // [fin del loading]
-        // //////////////////////////////////////////////////
-        submitBtn.disabled = false;
-        btnText.style.display = 'inline';
-        btnLoader.style.display = 'none';
-        // //////////////////////////////////////////////////
+        setProcessing(false);
     }
+}
+
+// 2. Lógica de Manejo del Formulario (Llama a la función de actualización)
+resetForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const password = passwordInput.value;
+    const confirmPassword = confirmPasswordInput.value;
+
+    // Validación local
+    if (password !== confirmPassword) {
+        errorDiv.textContent = 'Las contraseñas no coinciden';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    if (password.length < 6) {
+        errorDiv.textContent = 'La contraseña debe tener al menos 6 caracteres';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    await updatePassword(password);
+});
+
+// 3. Lógica de Detección de Eventos (Solución definitiva al problema de timing)
+// Esto debe ejecutarse al cargar la página.
+supabase.auth.onAuthStateChange(async (event, session) => {
+    // Si la librería de Supabase logra establecer la sesión
+    if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        // Muestra el mensaje de éxito para que el usuario pueda ingresar la contraseña
+        successDiv.textContent = '¡Token validado! Ingresa y confirma tu nueva contraseña.';
+        successDiv.style.display = 'block';
+    }
+    
+    // Si se activa el evento USER_UPDATED (ej. si el usuario presiona Enter en el formulario), 
+    // se maneja a través del listener del formulario (Paso 2).
 });
