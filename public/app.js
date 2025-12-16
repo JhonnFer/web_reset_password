@@ -43,7 +43,7 @@ form.addEventListener('submit', async (e) => {
       headers: { Authorization: `Bearer ${token}` },
     },
   });
-  
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -86,4 +86,5 @@ form.addEventListener('submit', async (e) => {
       btnLoader.style.display = 'none';
     }
   });
+})
 });
