@@ -1,6 +1,5 @@
 const express = require('express');
 const path = require('path');
-const bodyParser = require('body-parser');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
@@ -12,13 +11,13 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// --- Middleware ---
+// Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Servir HTML
 app.get('/reset-password', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/reset-password.html'));
+  res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
 });
 
 // Endpoint para actualizar contraseña
@@ -30,23 +29,17 @@ app.post('/reset-password', async (req, res) => {
   }
 
   try {
-    // --- Buscar usuario por email ---
-    const { data: users, error: fetchError } = await supabase
-      .from('auth.users')
-      .select('id')
-      .eq('email', email)
-      .single();
+    // --- Buscar usuario usando Service Role ---
+    const { data: userData, error: getUserError } = await supabase.auth.admin.getUserByEmail(email);
 
-    if (fetchError || !users) {
+    if (getUserError || !userData?.user) {
       return res.status(400).json({ error: 'Usuario no encontrado' });
     }
 
-    const user_id = users.id;
+    const userId = userData.user.id;
 
-    // --- Actualizar contraseña con Service Role ---
-    const { data, error: updateError } = await supabase.auth.admin.updateUserById(user_id, {
-      password,
-    });
+    // --- Actualizar contraseña ---
+    const { data, error: updateError } = await supabase.auth.admin.updateUserById(userId, { password });
 
     if (updateError) {
       return res.status(400).json({ error: updateError.message });
