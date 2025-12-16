@@ -32,15 +32,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // ✅ Mostrar formulario si token válido
+  // ✅ Mostrar formulario
   form.style.display = 'block';
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const password = document.getElementById('password').value;
-    const confirmPassword =
-      document.getElementById('confirmPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
 
     if (password !== confirmPassword) {
       errorDiv.innerText = 'Las contraseñas no coinciden';
@@ -48,21 +47,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    // 🔹 Usar access_token directamente
-    const { error } = await supabase.auth.updateUser(
-      { password },
-      { accessToken: accessToken }
-    );
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password,
+      }, { accessToken: accessToken });
 
-    if (error) {
-      errorDiv.innerText = error.message;
+      if (error) {
+        errorDiv.innerText = error.message;
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      successDiv.innerText = 'Contraseña actualizada correctamente';
+      successDiv.style.display = 'block';
+      errorDiv.style.display = 'none';
+      form.reset();
+    } catch (err) {
+      console.error(err);
+      errorDiv.innerText = 'Error al actualizar la contraseña';
       errorDiv.style.display = 'block';
-      return;
     }
-
-    successDiv.innerText = 'Contraseña actualizada correctamente';
-    successDiv.style.display = 'block';
-    errorDiv.style.display = 'none';
-    form.reset();
   });
 });
