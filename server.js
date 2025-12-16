@@ -6,12 +6,13 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- Configura Supabase con Service Role Key (backend solo) ---
+// --- Configura Supabase con Service Role Key (solo en backend) ---
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// --- Middleware ---
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -22,33 +23,38 @@ app.get('/reset-password', (req, res) => {
 
 // Endpoint para actualizar contraseña
 app.post('/reset-password', async (req, res) => {
-  console.log('Body recibido:', req.body);
-  const { access_token, password } = req.body;
+  const { email, password } = req.body;
 
-  if (!access_token || !password) {
+  if (!email || !password) {
     return res.status(400).json({ error: 'Faltan parámetros' });
   }
 
   try {
-    // Obtener usuario con token de recuperación
-    const { data: userData, error: getUserError } = await supabase.auth.getUser(access_token);
+    // --- Buscar usuario por email ---
+    const { data: users, error: fetchError } = await supabase
+      .from('auth.users')
+      .select('id')
+      .eq('email', email)
+      .single();
 
-    if (getUserError || !userData?.user) {
-      return res.status(400).json({ error: 'Token inválido o expirado' });
+    if (fetchError || !users) {
+      return res.status(400).json({ error: 'Usuario no encontrado' });
     }
 
-    // Actualizar contraseña usando Service Role
-    const { data, error } = await supabase.auth.admin.updateUserById(userData.user.id, {
-      password
+    const user_id = users.id;
+
+    // --- Actualizar contraseña con Service Role ---
+    const { data, error: updateError } = await supabase.auth.admin.updateUserById(user_id, {
+      password,
     });
 
-    if (error) {
-      return res.status(400).json({ error: error.message });
+    if (updateError) {
+      return res.status(400).json({ error: updateError.message });
     }
 
     return res.json({ message: 'Contraseña actualizada correctamente' });
   } catch (err) {
-    console.error(err);
+    console.error('Error interno del servidor:', err);
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
