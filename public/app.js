@@ -6,14 +6,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('resetForm');
   const message = document.getElementById('message');
 
-  // --- 1. Obtener access_token del hash ---
-  const hashParams = new URLSearchParams(window.location.hash.slice(1));
-  const access_token = hashParams.get('access_token');
-  const type = hashParams.get('type');
+  // --- 1. Obtener access_token y type ---
+  let access_token = null;
+  let type = null;
 
+  // Intentar hash primero
+  if (window.location.hash) {
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    access_token = hashParams.get('access_token');
+    type = hashParams.get('type');
+  }
+
+  // Fallback: query string
+  if ((!access_token || !type) && window.location.search) {
+    const queryParams = new URLSearchParams(window.location.search);
+    access_token = queryParams.get('access_token');
+    type = queryParams.get('type');
+  }
+
+  // Validar token
   if (!access_token || type !== 'recovery') {
     message.textContent =
-      'Atención: enlace inválido o expirado. Intenta solicitar otro restablecimiento.';
+      'Atención: enlace inválido o expirado. Abre el enlace desde el correo de recuperación.';
     message.style.color = 'red';
     return;
   }
@@ -47,9 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
     btnLoader.style.display = 'inline-block';
 
     try {
-      const { data, error } = await supabaseTemp.auth.updateUser({
-        password,
-      });
+      // --- Actualizar contraseña usando recovery token ---
+      const { data, error } = await supabaseTemp.auth.updateUser({ password });
 
       if (error) {
         message.textContent = error.message;
