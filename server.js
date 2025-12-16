@@ -11,11 +11,13 @@ try {
   app.use(express.json());
   app.use(express.static(path.join(__dirname, 'public')));
 
+  // Crear cliente de Supabase con URL y clave de cliente
   const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
+    process.env.SUPABASE_URL,    // Usa tu URL de Supabase
+    process.env.SUPABASE_KEY     // Usa la clave pública de cliente
   );
 
+  // Endpoint para servir la página de restablecimiento de contraseña
   app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
   });
@@ -24,26 +26,29 @@ try {
     res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
   });
 
-  // 🔐 ENDPOINT REAL PARA CAMBIAR CONTRASEÑA
+  // 🔐 Endpoint para cambiar la contraseña
   app.post('/reset-password', async (req, res) => {
     console.log('BODY RECIBIDO:', req.body);
     const { password, access_token } = req.body;
-    
 
     if (!password || !access_token) {
       return res.status(400).json({ error: 'Datos incompletos' });
     }
 
-    const { error } = await supabase.auth.updateUser(
-      { password },
-      { accessToken: access_token }
-    );
+    try {
+      // Actualizar la contraseña del usuario con el access_token
+      const { user, error } = await supabase.auth.api.updateUser(access_token, {
+        password: password,
+      });
 
-    if (error) {
-      return res.status(400).json({ error: error.message });
+      if (error) {
+        return res.status(400).json({ error: error.message });
+      }
+
+      res.json({ message: 'Contraseña actualizada correctamente' });
+    } catch (err) {
+      return res.status(400).json({ error: 'Error al actualizar la contraseña' });
     }
-
-    res.json({ message: 'Contraseña actualizada correctamente' });
   });
 
   app.listen(PORT, '0.0.0.0', () => {
