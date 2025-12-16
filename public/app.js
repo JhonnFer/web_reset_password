@@ -5,19 +5,25 @@ const SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1ZmdseWR2emZsbXptbGZwaHdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyOTU5ODgsImV4cCI6MjA4MDg3MTk4OH0.F8gcELQQxO6LbqxO1gqhiZwUjLT1DotLqdAmo1YvEv8'; // anon key
 
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    detectSessionInUrl: true,
+    persistSession: true,
+  },
+});
 
 document.addEventListener('DOMContentLoaded', async () => {
   const form = document.getElementById('resetForm');
   const errorDiv = document.getElementById('error');
   const successDiv = document.getElementById('success');
 
-  // Ocultar mensajes al inicio
   errorDiv.style.display = 'none';
   successDiv.style.display = 'none';
   form.style.display = 'none';
 
-  // 🔐 SUPABASE YA PROCESÓ EL RECOVERY
+  // ⏳ Esperar a que Supabase procese el hash
+  await new Promise((r) => setTimeout(r, 300));
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -31,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // ✅ SI HAY SESIÓN → MOSTRAR FORM
+  // ✅ SESIÓN DETECTADA → MOSTRAR FORM
   form.style.display = 'block';
 
   form.addEventListener('submit', async (e) => {
@@ -47,9 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const { error } = await supabase.auth.updateUser({
-      password,
-    });
+    const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
       errorDiv.innerText = error.message;
