@@ -12,7 +12,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-app.use(bodyParser.json());
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Servir HTML
@@ -22,7 +22,7 @@ app.get('/reset-password', (req, res) => {
 
 // Endpoint para actualizar contraseña
 app.post('/reset-password', async (req, res) => {
-  console.log('POST /reset-password body:', req.body);
+  console.log('Body recibido:', req.body);
   const { access_token, password } = req.body;
 
   if (!access_token || !password) {
