@@ -1,92 +1,62 @@
-console.log('Reset password app loaded');
+const SUPABASE_URL = 'https://cufglydvzflmzmlfphwm.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1ZmdseWR2emZsbXptbGZwaHdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyOTU5ODgsImV4cCI6MjA4MDg3MTk4OH0.F8gcELQQxO6LbqxO1gqhiZwUjLT1DotLqdAmo1YvEv8'; // misma que ya usas
 
-// 1️⃣ Leer token desde el HASH (#)
-const hash = window.location.hash.substring(1);
-const params = new URLSearchParams(hash);
-
-const access_token = params.get('access_token');
-const type = params.get('type');
-
-// Referencias UI
 const form = document.getElementById('resetForm');
 const errorDiv = document.getElementById('error');
 const successDiv = document.getElementById('success');
-const submitBtn = document.getElementById('submitBtn');
-const btnText = document.getElementById('btnText');
-const btnLoader = document.getElementById('btnLoader');
+
+// 1️⃣ Leer el token DESDE EL HASH (#)
+const hashParams = new URLSearchParams(window.location.hash.substring(1));
+const accessToken = hashParams.get('access_token');
+const type = hashParams.get('type');
+
+console.log('TOKEN:', accessToken);
+console.log('TYPE:', type);
 
 // 2️⃣ Validar token
-if (!access_token || type !== 'recovery') {
+if (!accessToken || type !== 'recovery') {
   errorDiv.style.display = 'block';
-  errorDiv.textContent =
-    'El enlace es inválido o ha expirado. Solicita nuevamente el cambio de contraseña.';
+  errorDiv.innerText = 'El enlace es inválido o ha expirado.';
   form.style.display = 'none';
+  throw new Error('Token inválido');
 }
 
-// 3️⃣ Submit del formulario
+// 3️⃣ Mostrar formulario (ESTA ES LA CLAVE)
+form.style.display = 'block';
+errorDiv.style.display = 'none';
+
+// 4️⃣ Envío del formulario
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const password = document.getElementById('password').value;
   const confirmPassword = document.getElementById('confirmPassword').value;
 
-  errorDiv.style.display = 'none';
-  successDiv.style.display = 'none';
-
-  if (password.length < 6) {
-    showError('La contraseña debe tener al menos 6 caracteres');
-    return;
-  }
-
   if (password !== confirmPassword) {
-    showError('Las contraseñas no coinciden');
+    errorDiv.innerText = 'Las contraseñas no coinciden';
+    errorDiv.style.display = 'block';
     return;
   }
-
-  setLoading(true);
 
   try {
     const res = await fetch('/reset-password', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         password,
-        access_token
+        access_token: accessToken
       })
     });
 
-    const data = await res.json();
+    if (!res.ok) throw new Error('Error al actualizar contraseña');
 
-    if (!res.ok) {
-      showError(data.error || 'Error al actualizar la contraseña');
-      setLoading(false);
-      return;
-    }
-
+    successDiv.innerText = 'Contraseña actualizada correctamente';
     successDiv.style.display = 'block';
-    successDiv.textContent =
-      'Contraseña actualizada correctamente. Ya puedes iniciar sesión.';
-
+    errorDiv.style.display = 'none';
     form.reset();
-    window.location.hash = '';
+
   } catch (err) {
-    console.error(err);
-    showError('Error de conexión con el servidor');
-  } finally {
-    setLoading(false);
+    errorDiv.innerText = 'No se pudo actualizar la contraseña';
+    errorDiv.style.display = 'block';
   }
 });
-
-// Helpers
-function showError(message) {
-  errorDiv.style.display = 'block';
-  errorDiv.textContent = message;
-}
-
-function setLoading(loading) {
-  submitBtn.disabled = loading;
-  btnText.style.display = loading ? 'none' : 'inline';
-  btnLoader.style.display = loading ? 'inline-block' : 'none';
-}
