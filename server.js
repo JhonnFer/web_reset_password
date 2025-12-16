@@ -1,26 +1,33 @@
-import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
+console.log('=== STARTING APP ===');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Redirigir raíz al reset-password
-app.get('/', (req, res) => {
-  res.redirect('/reset-password');
-});
-
-// Servir HTML de reset-password
-app.get('/reset-password', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/reset-password.html'));
-});
-
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
-});
+try {
+  const express = require('express');
+  console.log('Express loaded OK');
+  
+  const path = require('path');
+  console.log('Path loaded OK');
+  
+  const app = express();
+  const PORT = process.env.PORT || 3000;
+  
+  console.log('Dirname:', __dirname);
+  console.log('Public path:', path.join(__dirname, 'public'));
+  
+  app.use(express.static(path.join(__dirname, 'public')));
+  
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+  });
+  
+  app.get('/reset-password', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+  });
+  
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log('=== SERVER RUNNING ON PORT', PORT, '===');
+  });
+  
+} catch (error) {
+  console.log('=== ERROR ===');
+  console.log(error);
+}
