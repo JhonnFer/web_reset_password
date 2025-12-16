@@ -26,7 +26,9 @@ try {
 
   // 🔐 ENDPOINT REAL PARA CAMBIAR CONTRASEÑA
   app.post('/reset-password', async (req, res) => {
+    console.log('BODY RECIBIDO:', req.body);
     const { password, access_token } = req.body;
+    
 
     if (!password || !access_token) {
       return res.status(400).json({ error: 'Datos incompletos' });
