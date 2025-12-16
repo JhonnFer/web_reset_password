@@ -4,6 +4,7 @@ const SUPABASE_URL = 'https://cufglydvzflmzmlfphwm.supabase.co';
 const SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1ZmdseWR2emZsbXptbGZwaHdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyOTU5ODgsImV4cCI6MjA4MDg3MTk4OH0.F8gcELQQxO6LbqxO1gqhiZwUjLT1DotLqdAmo1YvEv8'; // anon key
 
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -11,31 +12,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   const errorDiv = document.getElementById('error');
   const successDiv = document.getElementById('success');
 
-  // 🔹 Leer parámetros desde QUERY (? NO #)
-  const params = new URLSearchParams(window.location.search);
-  const type = params.get('type');
+  // Ocultar mensajes al inicio
+  errorDiv.style.display = 'none';
+  successDiv.style.display = 'none';
+  form.style.display = 'none';
 
-  if (type !== 'recovery') {
-    errorDiv.innerText =
-      'El enlace es inválido o ha expirado. Solicita nuevamente el cambio de contraseña.';
-    errorDiv.style.display = 'block';
-    form.style.display = 'none';
-    return;
-  }
-
-  // 🔹 Supabase YA creó la sesión automáticamente
+  // 🔐 SUPABASE YA PROCESÓ EL RECOVERY
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
+  console.log('SESSION:', session);
+
   if (!session) {
     errorDiv.innerText =
-      'Sesión no válida o expirada. Solicita nuevamente el cambio de contraseña.';
+      'El enlace es inválido o ha expirado. Solicita nuevamente el cambio de contraseña.';
     errorDiv.style.display = 'block';
-    form.style.display = 'none';
     return;
   }
 
+  // ✅ SI HAY SESIÓN → MOSTRAR FORM
   form.style.display = 'block';
 
   form.addEventListener('submit', async (e) => {
