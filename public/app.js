@@ -7,34 +7,34 @@ document.addEventListener('DOMContentLoaded', () => {
   const errorDiv = document.getElementById('error');
   const successDiv = document.getElementById('success');
 
-  // 🔥 FORZAR VISIBILIDAD INICIAL
+  if (!form) {
+    console.error('FORM NO ENCONTRADO');
+    return;
+  }
+
+  // Mostrar formulario siempre
   form.style.display = 'block';
   errorDiv.style.display = 'none';
   successDiv.style.display = 'none';
 
-  // 1️⃣ Leer token desde el HASH (#)
   const hash = window.location.hash.substring(1);
   const params = new URLSearchParams(hash);
 
   const accessToken = params.get('access_token');
   const type = params.get('type');
 
-  console.log('HASH:', hash);
   console.log('TOKEN:', accessToken);
   console.log('TYPE:', type);
 
-  // 2️⃣ Validar token
   if (!accessToken || type !== 'recovery') {
     errorDiv.innerText =
       'El enlace es inválido o ha expirado. Solicita nuevamente el cambio de contraseña.';
     errorDiv.style.display = 'block';
-    form.style.display = 'none';
-    return; // ❗ NO throw
+    return;
   }
 
-  // 3️⃣ Envío del formulario
   form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // 🔥 ESTO YA NO SE PIERDE
 
     const password = document.getElementById('password').value;
     const confirmPassword =
@@ -62,8 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
       successDiv.style.display = 'block';
       errorDiv.style.display = 'none';
       form.reset();
-    } catch (err) {
-      errorDiv.innerText = 'No se pudo actualizar la contraseña';
+    } catch {
+      errorDiv.innerText = 'Error al actualizar la contraseña';
       errorDiv.style.display = 'block';
     }
   });
