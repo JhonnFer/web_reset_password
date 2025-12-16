@@ -17,10 +17,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   form.style.display = 'none';
 
   // 🔹 Leer hash de URL
-  const hash = window.location.hash.substring(1);
-  const params = new URLSearchParams(hash);
-  const accessToken = params.get('access_token');
-  const type = params.get('type');
+const urlParams = new URLSearchParams(window.location.search);
+const accessToken = urlParams.get('token');
+const type = urlParams.get('type');
 
   console.log('TOKEN:', accessToken);
   console.log('TYPE:', type);
