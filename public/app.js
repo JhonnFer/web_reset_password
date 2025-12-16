@@ -1,13 +1,12 @@
-// app.js
 const form = document.getElementById('resetForm');
 const message = document.getElementById('message');
 
-// Leer email desde query string
-const queryParams = new URLSearchParams(window.location.search);
-const email = queryParams.get('email');
+// Leer access_token desde hash (#) de la URL
+const params = new URLSearchParams(window.location.hash.replace('#', '?'));
+const access_token = params.get('access_token');
 
-if (!email) {
-  message.textContent = 'Enlace inválido o correo no proporcionado.';
+if (!access_token) {
+  message.textContent = 'Enlace inválido o expirado.';
   message.style.color = 'red';
 }
 
@@ -26,7 +25,7 @@ form.addEventListener('submit', async (e) => {
     const res = await fetch('/reset-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ password, access_token }),
     });
 
     const data = await res.json();

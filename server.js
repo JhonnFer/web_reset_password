@@ -1,18 +1,20 @@
-// server.js
-const express = require('express');
-const path = require('path');
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js'
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- Supabase con Service Role Key (solo backend) ---
 const supabase = createClient(
-  process.env.SUPABASE_URL,
+  "https://cufglydvzflmzmlfphwm.supabase.co",
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -21,39 +23,23 @@ app.get('/', (req, res) => {
   res.redirect('/reset-password');
 });
 
-// Servir HTML directamente (por si se entra por /reset-password)
+// Servir HTML de reset-password
 app.get('/reset-password', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/reset-password.html'));
 });
 
-// Endpoint para actualizar contraseña
+// Endpoint para actualizar contraseña usando access_token
 app.post('/reset-password', async (req, res) => {
-  const { email, password } = req.body;
+  const { password, access_token } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Faltan parámetros: email o password' });
+  if (!password || !access_token) {
+    return res.status(400).json({ error: 'Faltan parámetros' });
   }
 
   try {
-    // Buscar usuario por email
-    const { data: user, error: fetchError } = await supabase
-      .from('auth.users')
-      .select('id')
-      .eq('email', email)
-      .single();
+    const { error } = await supabase.auth.updateUser(access_token, { password });
 
-    if (fetchError || !user) {
-      return res.status(400).json({ error: 'Usuario no encontrado' });
-    }
-
-    // Actualizar contraseña usando Service Role Key
-    const { data, error: updateError } = await supabase.auth.admin.updateUserById(user.id, {
-      password,
-    });
-
-    if (updateError) {
-      return res.status(400).json({ error: updateError.message });
-    }
+    if (error) return res.status(400).json({ error: error.message });
 
     return res.json({ message: 'Contraseña actualizada correctamente' });
   } catch (err) {
@@ -62,7 +48,6 @@ app.post('/reset-password', async (req, res) => {
   }
 });
 
-// Iniciar servidor
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
