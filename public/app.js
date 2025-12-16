@@ -5,12 +5,7 @@ const SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1ZmdseWR2emZsbXptbGZwaHdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyOTU5ODgsImV4cCI6MjA4MDg3MTk4OH0.F8gcELQQxO6LbqxO1gqhiZwUjLT1DotLqdAmo1YvEv8'; // anon key
 
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    detectSessionInUrl: true,
-    persistSession: true,
-  },
-});
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 document.addEventListener('DOMContentLoaded', async () => {
   const form = document.getElementById('resetForm');
@@ -21,23 +16,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   successDiv.style.display = 'none';
   form.style.display = 'none';
 
-  // ⏳ Esperar a que Supabase procese el hash
-  await new Promise((r) => setTimeout(r, 300));
+  // 🔹 Leer hash de URL
+  const hash = window.location.hash.substring(1);
+  const params = new URLSearchParams(hash);
+  const accessToken = params.get('access_token');
+  const type = params.get('type');
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  console.log('TOKEN:', accessToken);
+  console.log('TYPE:', type);
 
-  console.log('SESSION:', session);
-
-  if (!session) {
+  if (!accessToken || type !== 'recovery') {
     errorDiv.innerText =
       'El enlace es inválido o ha expirado. Solicita nuevamente el cambio de contraseña.';
     errorDiv.style.display = 'block';
     return;
   }
 
-  // ✅ SESIÓN DETECTADA → MOSTRAR FORM
+  // ✅ Mostrar formulario si token válido
   form.style.display = 'block';
 
   form.addEventListener('submit', async (e) => {
@@ -53,7 +48,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const { error } = await supabase.auth.updateUser({ password });
+    // 🔹 Usar access_token directamente
+    const { error } = await supabase.auth.updateUser(
+      { password },
+      { accessToken: accessToken }
+    );
 
     if (error) {
       errorDiv.innerText = error.message;
