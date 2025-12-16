@@ -1,33 +1,57 @@
-console.log('=== STARTING APP ===');
+const express = require('express');
+const path = require('path');
+const bodyParser = require('body-parser');
+const { createClient } = require('@supabase/supabase-js');
 
-try {
-  const express = require('express');
-  console.log('Express loaded OK');
-  
-  const path = require('path');
-  console.log('Path loaded OK');
-  
-  const app = express();
-  const PORT = process.env.PORT || 3000;
-  
-  console.log('Dirname:', __dirname);
-  console.log('Public path:', path.join(__dirname, 'public'));
-  
-  app.use(express.static(path.join(__dirname, 'public')));
-  
-  app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
-  });
-  
-  app.get('/reset-password', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
-  });
-  
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log('=== SERVER RUNNING ON PORT', PORT, '===');
-  });
-  
-} catch (error) {
-  console.log('=== ERROR ===');
-  console.log(error);
-}
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// --- Configura Supabase con Service Role Key (backend solo) ---
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Servir HTML
+app.get('/reset-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/reset-password.html'));
+});
+
+// Endpoint para actualizar contraseña
+app.post('/reset-password', async (req, res) => {
+  const { access_token, password } = req.body;
+
+  if (!access_token || !password) {
+    return res.status(400).json({ error: 'Faltan parámetros' });
+  }
+
+  try {
+    // Obtener usuario con token de recuperación
+    const { data: userData, error: getUserError } = await supabase.auth.getUser(access_token);
+
+    if (getUserError || !userData?.user) {
+      return res.status(400).json({ error: 'Token inválido o expirado' });
+    }
+
+    // Actualizar contraseña usando Service Role
+    const { data, error } = await supabase.auth.admin.updateUserById(userData.user.id, {
+      password
+    });
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    return res.json({ message: 'Contraseña actualizada correctamente' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+});
