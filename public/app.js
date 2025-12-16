@@ -8,16 +8,6 @@ const supabase = createClient(
 const form = document.getElementById('resetForm');
 const message = document.getElementById('message');
 
-// Leer token y tipo desde query params
-const queryParams = new URLSearchParams(window.location.search);
-const accessToken = queryParams.get('access_token');
-const type = queryParams.get('type'); // puede ser 'magiclink' o 'recovery'
-
-if (!accessToken) {
-  message.textContent = 'Enlace inválido o token ausente.';
-  message.style.color = 'red';
-}
-
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -30,22 +20,11 @@ form.addEventListener('submit', async (e) => {
     return;
   }
 
-  let result;
-  if (type === 'magiclink') {
-    // Magic Link: el usuario ya está autenticado, solo actualizar contraseña
-    result = await supabase.auth.updateUser({ password });
-  } else if (type === 'recovery' || type === 'pck') {
-    // Recovery token: usar signInWithOtp / resetPasswordForEmail
-    // Supabase JS recomienda usar updateUser con session creada desde el token
-    result = await supabase.auth.updateUser({ password }, accessToken);
-  } else {
-    message.textContent = 'Tipo de enlace no soportado.';
-    message.style.color = 'red';
-    return;
-  }
+  // Actualizar contraseña del usuario autenticado (enlace mágico)
+  const { error } = await supabase.auth.updateUser({ password });
 
-  if (result.error) {
-    message.textContent = result.error.message;
+  if (error) {
+    message.textContent = error.message;
     message.style.color = 'red';
   } else {
     message.textContent = 'Contraseña actualizada correctamente.';
