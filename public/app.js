@@ -10,34 +10,40 @@ document.addEventListener('DOMContentLoaded', () => {
   const message = document.getElementById('message');
 
   let access_token = null;
-  let type = null;
+let type = null;
 
-  // --- 1. Leer token del query string
-  if (window.location.search) {
-    const queryParams = new URLSearchParams(window.location.search);
-    access_token = queryParams.get('access_token');
-    type = queryParams.get('type');
-  }
+// Leer query string
+const queryParams = new URLSearchParams(window.location.search);
+access_token = queryParams.get('access_token');
+type = queryParams.get('type');
 
-  console.log('Query string access_token:', access_token);
-  console.log('Query string type:', type);
+console.log('Query string access_token:', access_token);
+console.log('Query string type:', type);
 
-  if (!access_token || type !== 'recovery') {
-    message.textContent =
-      'Atención: enlace inválido o expirado. Abre el enlace desde el correo de recuperación.';
+// Guardar en localStorage para mantenerlo
+if (access_token) localStorage.setItem('access_token', access_token);
+if (type) localStorage.setItem('type', type);
+
+// Luego, al hacer submit:
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  // Recuperar token del localStorage
+  const token = localStorage.getItem('access_token');
+  const tokenType = localStorage.getItem('type');
+
+  if (!token || tokenType !== 'recovery') {
+    message.textContent = 'Token inválido o expirado.';
     message.style.color = 'red';
     return;
   }
 
-  // --- 2. Crear cliente temporal con token de recuperación
-  const supabaseTemp = createClient(SUPABASE_URL, null, {
+  const supabaseTemp = createClient(SUPABASE_URL, token, {
     global: {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     },
   });
-
+  
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
