@@ -16,7 +16,12 @@ const supabase = createClient(
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Servir HTML
+// Redirigir raíz al reset-password
+app.get('/', (req, res) => {
+  res.redirect('/reset-password');
+});
+
+// Servir HTML directamente (por si se entra por /reset-password)
 app.get('/reset-password', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/reset-password.html'));
 });
@@ -57,6 +62,7 @@ app.post('/reset-password', async (req, res) => {
   }
 });
 
+// Iniciar servidor
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
