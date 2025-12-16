@@ -22,6 +22,7 @@ app.get('/reset-password', (req, res) => {
 
 // Endpoint para actualizar contraseña
 app.post('/reset-password', async (req, res) => {
+  console.log('POST /reset-password body:', req.body);
   const { access_token, password } = req.body;
 
   if (!access_token || !password) {

@@ -23,11 +23,11 @@ form.addEventListener('submit', async (e) => {
   }
 
   try {
-    const res = await fetch('/reset-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ access_token, password })
-    });
+    const res = await fetch('https://webresetpassword-production-947b.up.railway.app/reset-password', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' }, // <- correcto
+  body: JSON.stringify({ access_token, password }) // <- correcto
+});
     const data = await res.json();
 
     if (res.ok) {
